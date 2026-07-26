@@ -27,6 +27,7 @@ This service does three things:
 | `GET /historical-option` | Yes | Same, for a specific option contract — get its `instrument_key` from `/option-chain` first. Only works for contracts that haven't expired yet (see limitations below). |
 | `GET /strike` | Yes | "Automatic Strike Search" — resolves ATM / ATM±N / closest-premium / closest-delta against the live chain. See `src/formulas/liveMarket/strikeResolver.ts`. |
 | `GET /expired-option-contracts` | Yes | Unchanged from before — still flagged as Upstox-Plus-plan-only. |
+| `GET /live-tick` | Yes | "Live Tick Engine" — polls the LTP endpoint (rate-limited to once/3s per instrument server-side) and builds 1m/5m/15m candles in memory. See `src/liveTick/tickEngine.ts` for why this is polling, not a push WebSocket. |
 
 **No database yet, by design (current roadmap phase):** `/option-chain` and
 the `/historical-*` routes are backed by a tiny in-memory TTL cache

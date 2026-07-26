@@ -11,6 +11,7 @@ import {
 } from '../upstox/upstoxClient.js';
 import { formatDateOnly, parseDateOnly, resolveExpiry, type ExpiryKind } from '../../../src/formulas/liveMarket/expiryCalendar.js';
 import { resolveStrike, type StrikeSelector } from '../../../src/formulas/liveMarket/strikeResolver.js';
+import { ALL_TIMEFRAMES, getLiveData, type Timeframe } from '../liveTick/tickEngine.js';
 
 export const marketRouter = Router();
 
@@ -231,6 +232,34 @@ marketRouter.get('/expired-option-contracts', async (req, res, next) => {
       return;
     }
     const data = await getExpiredOptionContracts(res.locals.accessToken, resolveInstrumentKey(symbol), expiry);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/market/live-tick?instrument_key=...&timeframes=1m,5m,15m
+ * "Live Tick Engine" — see the doc-comment in liveTick/tickEngine.ts for why
+ * this polls Upstox's LTP endpoint (rate-limited server-side to once per 3s
+ * per instrument) and builds candles in memory, rather than a push
+ * WebSocket. Lazily starts tracking an instrument on its first request;
+ * state is lost on server restart, by design (no DB in this phase).
+ */
+marketRouter.get('/live-tick', async (req, res, next) => {
+  try {
+    const instrumentKey = String(req.query.instrument_key ?? '');
+    if (!instrumentKey) {
+      res.status(400).json({ error: 'instrument_key query param is required.' });
+      return;
+    }
+    const requested = String(req.query.timeframes ?? '1m,5m,15m').split(',').map((s) => s.trim()) as Timeframe[];
+    const timeframes = requested.filter((tf) => (ALL_TIMEFRAMES as string[]).includes(tf));
+    if (timeframes.length === 0) {
+      res.status(400).json({ error: `timeframes must be a comma-separated subset of ${ALL_TIMEFRAMES.join(', ')}.` });
+      return;
+    }
+    const data = await getLiveData(res.locals.accessToken, instrumentKey, timeframes);
     res.json(data);
   } catch (err) {
     next(err);

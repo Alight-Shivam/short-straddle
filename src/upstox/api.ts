@@ -18,6 +18,32 @@ export interface CandleResponse {
   data: { candles: [string, number, number, number, number, number, number][] };
 }
 
+/** Mirrors `server/src/liveTick/tickEngine.ts` — kept local for the same reason as `CandleUnit` above. */
+export type Timeframe = '1m' | '5m' | '15m';
+
+export interface Tick {
+  timestamp: number;
+  price: number;
+}
+
+export interface LiveTickCandle {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  tickCount: number;
+}
+
+export interface LiveTickResult {
+  instrumentKey: string;
+  lastPrice: number | null;
+  stale: boolean;
+  lastFetchedAt: number | null;
+  ticks: Tick[];
+  candles: Partial<Record<Timeframe, LiveTickCandle[]>>;
+}
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export class ApiError extends Error {
@@ -99,6 +125,11 @@ export const upstoxApi = {
   historicalOption: (instrumentKey: string, unit: CandleUnit, interval: number, from: string, to: string) =>
     apiFetch<CandleResponse>(
       `/api/market/historical-option?instrument_key=${encodeURIComponent(instrumentKey)}&unit=${unit}&interval=${interval}&from=${from}&to=${to}`,
+    ),
+
+  liveTick: (instrumentKey: string, timeframes: Timeframe[]) =>
+    apiFetch<LiveTickResult>(
+      `/api/market/live-tick?instrument_key=${encodeURIComponent(instrumentKey)}&timeframes=${timeframes.join(',')}`,
     ),
 
   syncTrades: async (startDate?: string, endDate?: string): Promise<{ trades: Trade[]; skipped: string[]; totalRawFills: number }> => {

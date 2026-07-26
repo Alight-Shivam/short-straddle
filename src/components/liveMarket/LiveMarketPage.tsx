@@ -12,6 +12,7 @@ import { DataTable, type Column } from '../ui/DataTable';
 import { SimpleLineChart } from '../ui/charts';
 import { formatCurrency, formatNumber, formatPct } from '../../utils/format';
 import { StrikeExpiryFinder } from './StrikeExpiryFinder';
+import { LiveTickPanel } from './LiveTickPanel';
 
 const SYMBOLS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
 const EXPIRIES = [
@@ -31,6 +32,7 @@ export function LiveMarketPage() {
   const [selectedStrike, setSelectedStrike] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [tickTarget, setTickTarget] = useState<'spot' | 'CE' | 'PE'>('spot');
 
   const fetchChain = useCallback(async () => {
     if (!status.connected) return;
@@ -58,6 +60,12 @@ export function LiveMarketPage() {
 
   const activeStrike = selectedStrike ?? atmRow?.strike_price ?? null;
   const activeRow = rows?.find((r) => r.strike_price === activeStrike) ?? null;
+
+  const tickInstrumentKey =
+    tickTarget === 'spot' ? rows?.[0]?.underlying_key ?? null
+    : tickTarget === 'CE' ? activeRow?.call_options?.instrument_key ?? null
+    : activeRow?.put_options?.instrument_key ?? null;
+  const tickLabel = tickTarget === 'spot' ? `${symbol} Spot` : `${activeStrike ?? '—'} ${tickTarget}`;
   const payoff = useMemo(() => {
     if (!activeRow?.call_options || !activeRow?.put_options) return null;
     return computeStraddlePayoff({
@@ -148,6 +156,22 @@ export function LiveMarketPage() {
           <SimpleLineChart data={payoff.curve} xKey="spot" series={[{ dataKey: 'pnl', name: 'P/L at expiry' }]} />
         </ChartCard>
       )}
+
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500">Track live ticks for:</span>
+        <div className="flex gap-1">
+          {(['spot', 'CE', 'PE'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTickTarget(t)}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold ${tickTarget === t ? 'bg-sky-600 text-white' : 'border border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+            >
+              {t === 'spot' ? `${symbol} Spot` : `${activeStrike ?? '—'} ${t}`}
+            </button>
+          ))}
+        </div>
+      </div>
+      <LiveTickPanel instrumentKey={tickInstrumentKey} label={tickLabel} />
     </div>
   );
 }
