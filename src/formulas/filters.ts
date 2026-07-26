@@ -5,6 +5,7 @@ import { classifyVix, type VixBucket } from './analysis/volatility';
 import { classifyExpiryBucket, type ExpiryBucket } from './analysis/expiryDay';
 import { classifyAllGapTrend, type GapType, type TrendType } from './analysis/gapTrend';
 import { timeToBucketLabel } from './analysis/entryTime';
+import { parseDateOnly } from './liveMarket/expiryCalendar';
 
 /**
  * Stage 3 — Dashboard Filters.
@@ -13,6 +14,9 @@ import { timeToBucketLabel } from './analysis/entryTime';
  * `null` for numeric ranges) means "no restriction on this dimension".
  */
 export interface FilterState {
+  /** YYYY-MM-DD, inclusive. `null` means no restriction on that end. */
+  dateRangeStart: string | null;
+  dateRangeEnd: string | null;
   years: number[];
   months: number[]; // 1-12
   daysOfWeek: number[]; // 1=Mon..5=Fri
@@ -34,6 +38,8 @@ export interface FilterState {
 }
 
 export const DEFAULT_FILTERS: FilterState = {
+  dateRangeStart: null,
+  dateRangeEnd: null,
   years: [],
   months: [],
   daysOfWeek: [],
@@ -63,7 +69,21 @@ export const DEFAULT_FILTERS: FilterState = {
 export function applyFilters(fullDataset: Trade[], filters: FilterState): Trade[] {
   const gapTrendMap = classifyAllGapTrend(fullDataset);
 
+  // `entryDate` carries a time-of-day (from Entry Date + Entry Time), but the
+  // range picker is date-only — so the end bound must reach through the END
+  // of that calendar day, not stop dead at its midnight.
+  const rangeStart = filters.dateRangeStart ? parseDateOnly(filters.dateRangeStart) : null;
+  const rangeEndExclusive = (() => {
+    const d = filters.dateRangeEnd ? parseDateOnly(filters.dateRangeEnd) : null;
+    if (!d) return null;
+    const next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    return next;
+  })();
+
   return fullDataset.filter((t) => {
+    if (rangeStart && t.entryDate.getTime() < rangeStart.getTime()) return false;
+    if (rangeEndExclusive && t.entryDate.getTime() >= rangeEndExclusive.getTime()) return false;
     if (filters.years.length && !filters.years.includes(t.year)) return false;
     if (filters.months.length && !filters.months.includes(t.month)) return false;
     if (filters.daysOfWeek.length && !filters.daysOfWeek.includes(t.dayOfWeek)) return false;

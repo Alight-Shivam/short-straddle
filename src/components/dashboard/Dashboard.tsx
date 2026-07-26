@@ -36,7 +36,15 @@ export function Dashboard({ trades, onReset }: { trades: Trade[]; onReset: () =>
 
   return (
     <div className="min-h-full">
-      <Header tradeCount={trades.length} startingCapital={startingCapital} onStartingCapitalChange={setStartingCapital} onReset={onReset} />
+      <Header
+        tradeCount={trades.length}
+        startingCapital={startingCapital}
+        onStartingCapitalChange={setStartingCapital}
+        dateRangeStart={filters.dateRangeStart}
+        dateRangeEnd={filters.dateRangeEnd}
+        onDateRangeChange={(start, end) => setFilters((f) => ({ ...f, dateRangeStart: start, dateRangeEnd: end }))}
+        onReset={onReset}
+      />
       <main className="mx-auto flex max-w-[1400px] flex-col gap-5 px-6 py-5">
         <FiltersBar allTrades={trades} filters={filters} onChange={setFilters} filteredCount={filteredTrades.length} />
         <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
