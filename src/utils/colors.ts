@@ -1,8 +1,15 @@
 /**
- * Chart color tokens (dark mode only, this app doesn't ship a light theme).
- * Values are taken from the validated dataviz reference palette so
- * categorical series stay colorblind-safe and profit/loss reuse the fixed
- * status colors rather than inventing new hues.
+ * Chart color tokens. Values are taken from the validated dataviz reference
+ * palette so categorical series stay colorblind-safe and profit/loss reuse
+ * the fixed status colors rather than inventing new hues.
+ *
+ * Data-encoding colors (CATEGORICAL/GOOD/CRITICAL/SEQUENTIAL_BLUE/
+ * DIVERGING_NEUTRAL) are deliberately constant across light/dark themes —
+ * they were validated for colorblind-safety and both read fine against
+ * either page background. Only the chrome around them (grid lines, axis
+ * ticks, tooltip surface) adapts to theme, via the CSS custom properties
+ * defined in `src/index.css` (`--chart-*`), which Recharts/SVG resolve at
+ * paint time same as any other CSS color value.
  */
 
 // Fixed-order categorical hues (dark column) — always assign in this order, never cycle.
@@ -16,12 +23,15 @@ export const CRITICAL = '#d03b3b'; // loss
 export const SEQUENTIAL_BLUE = ['#cde2fb', '#9ec5f4', '#5598e7', '#2a78d6', '#184f95'];
 
 // Diverging pair for profit(+)/loss(-) heatmaps, neutral midpoint near zero.
-export const DIVERGING_NEUTRAL = '#383835';
+// A fixed mid-gray (not theme-dependent) — dark enough to read on a light
+// page, light enough to read on a dark one, and still supports the white
+// overlay text used on top of it in the calendar heatmap either way.
+export const DIVERGING_NEUTRAL = '#64748b';
 
-export const CHART_GRID = '#1e293b'; // slate-800
-export const CHART_AXIS = '#64748b'; // slate-500
-export const CHART_TOOLTIP_BG = '#0f172a'; // slate-900
-export const CHART_TOOLTIP_BORDER = '#334155'; // slate-700
+export const CHART_GRID = 'var(--chart-grid)';
+export const CHART_AXIS = 'var(--chart-axis)';
+export const CHART_TOOLTIP_BG = 'var(--chart-tooltip-bg)';
+export const CHART_TOOLTIP_BORDER = 'var(--chart-tooltip-border)';
 
 export const CE_COLOR = CATEGORICAL[0];
 export const PE_COLOR = CATEGORICAL[1];

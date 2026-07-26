@@ -22,7 +22,7 @@ const tooltipStyle = {
   border: `1px solid ${CHART_TOOLTIP_BORDER}`,
   borderRadius: 8,
   fontSize: 12,
-  color: '#f1f5f9',
+  color: 'var(--color-slate-100)',
 };
 
 const axisProps = { stroke: CHART_AXIS, fontSize: 11, tickLine: false, axisLine: { stroke: CHART_GRID } };
@@ -61,7 +61,7 @@ export function MultiBarChart({ data, xKey, series, height = 260 }: { data: Reco
         <XAxis dataKey={xKey} {...axisProps} />
         <YAxis {...axisProps} width={56} />
         <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-        {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12, color: '#cbd5e1' }} />}
+        {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-slate-300)' }} />}
         {series.map((s, i) => (
           <Bar key={s.dataKey} dataKey={s.dataKey} name={s.name} fill={s.color ?? CATEGORICAL[i % CATEGORICAL.length]} radius={[4, 4, 0, 0]} />
         ))}
@@ -120,7 +120,7 @@ export function SimpleLineChart({ data, xKey, series, height = 260 }: { data: Re
         <XAxis dataKey={xKey} {...axisProps} minTickGap={24} />
         <YAxis {...axisProps} width={56} />
         <Tooltip contentStyle={tooltipStyle} />
-        {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12, color: '#cbd5e1' }} />}
+        {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-slate-300)' }} />}
         {series.map((s, i) => (
           <Line key={s.dataKey} type="monotone" dataKey={s.dataKey} name={s.name} stroke={s.color ?? CATEGORICAL[i % CATEGORICAL.length]} strokeWidth={2} dot={false} />
         ))}
@@ -144,7 +144,7 @@ export function WinLossPie({ wins, losses, scratches = 0, height = 220 }: { wins
           ))}
         </Pie>
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#cbd5e1' }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-slate-300)' }} />
       </PieChart>
     </ResponsiveContainer>
   );

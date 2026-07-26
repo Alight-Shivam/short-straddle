@@ -8,6 +8,7 @@ import { FileUpload } from './components/upload/FileUpload';
 import { ValidationReportView } from './components/upload/ValidationReport';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { UpstoxProvider } from './upstox/UpstoxContext';
+import { ThemeProvider } from './theme/ThemeContext';
 import { TopBar, type AppView } from './components/layout/TopBar';
 import { LiveMarketPage } from './components/liveMarket/LiveMarketPage';
 
@@ -95,20 +96,22 @@ function App() {
   const [view, setView] = useState<AppView>('backtest');
 
   return (
-    <UpstoxProvider>
-      <div className="flex min-h-full flex-col">
-        <TopBar activeView={view} onNavigate={setView} />
-        <div className="flex-1">
-          {view === 'backtest' ? (
-            <BacktestAnalyzer />
-          ) : (
-            <div className="mx-auto max-w-[1400px] px-6 py-6">
-              <LiveMarketPage />
-            </div>
-          )}
+    <ThemeProvider>
+      <UpstoxProvider>
+        <div className="flex min-h-full flex-col">
+          <TopBar activeView={view} onNavigate={setView} />
+          <div className="flex-1">
+            {view === 'backtest' ? (
+              <BacktestAnalyzer />
+            ) : (
+              <div className="mx-auto max-w-[1400px] px-6 py-6">
+                <LiveMarketPage />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </UpstoxProvider>
+      </UpstoxProvider>
+    </ThemeProvider>
   );
 }
 

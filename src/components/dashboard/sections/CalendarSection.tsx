@@ -55,8 +55,8 @@ export function CalendarSection({ report }: { report: AnalysisReport }) {
                       title={c.day && c.pnl !== undefined ? `${monthName.split(' ')[0]} ${c.day}: ${formatCurrency(c.pnl)} (${c.tradeCount} trades)` : undefined}
                       className="aspect-square rounded text-center text-[9px] leading-[1.6]"
                       style={{
-                        background: c.day === null ? 'transparent' : c.pnl !== undefined ? divergingColor(c.pnl, maxAbs) : '#1e293b',
-                        color: c.pnl !== undefined ? 'rgba(255,255,255,0.9)' : '#475569',
+                        background: c.day === null ? 'transparent' : c.pnl !== undefined ? divergingColor(c.pnl, maxAbs) : 'var(--color-slate-800)',
+                        color: c.pnl !== undefined ? 'rgba(255,255,255,0.9)' : 'var(--color-slate-600)',
                       }}
                     >
                       {c.day ?? ''}
