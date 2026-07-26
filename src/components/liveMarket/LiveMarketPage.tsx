@@ -11,6 +11,7 @@ import { ChartCard } from '../ui/ChartCard';
 import { DataTable, type Column } from '../ui/DataTable';
 import { SimpleLineChart } from '../ui/charts';
 import { formatCurrency, formatNumber, formatPct } from '../../utils/format';
+import { StrikeExpiryFinder } from './StrikeExpiryFinder';
 
 const SYMBOLS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'];
 const EXPIRIES = [
@@ -136,6 +137,8 @@ export function LiveMarketPage() {
       <ChartCard title={`${symbol} Option Chain`} subtitle={`Expiry: ${expiry.replace('_', ' ')} · click a strike to see its live straddle payoff below`}>
         <DataTable columns={cols} rows={rows ?? []} maxHeight={480} dense />
       </ChartCard>
+
+      <StrikeExpiryFinder symbol={symbol} expiry={expiry} onStrikeResolved={setSelectedStrike} />
 
       {payoff && activeRow && (
         <ChartCard

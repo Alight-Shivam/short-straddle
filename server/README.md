@@ -7,12 +7,51 @@ This service does three things:
 
 1. **Auth** — runs the OAuth2 dance with Upstox and keeps the resulting
    access token in a server-side session (never sent to the frontend).
-2. **Market data proxy** — option chain, quotes, historical candles, all
-   authenticated with the session's token.
+2. **Market data proxy** — option chain, quotes, historical candles, expiry/
+   strike resolution, all authenticated with the session's token (except
+   `/expiry`, which is pure calendar math and needs no session at all).
 3. **Trade sync** — pulls the logged-in user's own executed F&O trades from
    Upstox and reshapes them into this app's `Trade[]` model (see
    `src/upstox/tradeSync.ts` — read the caveats at the top of that file
    before trusting synced data the same way you'd trust a CSV upload).
+
+### Market data routes (`server/src/routes/market.ts`)
+
+| Route | Auth? | What |
+|---|---|---|
+| `GET /expiry` | No | Nearest/weekly/monthly expiry date for a symbol — pure date math, reuses the same NSE expiry-weekday schedule (`src/formulas/analysis/expiryDay.ts`) the backtest engine classifies past trades with. |
+| `GET /option-chain` | Yes | Live option-chain snapshot (OI/IV/Greeks/LTP per strike), cached 3s server-side to de-dupe near-simultaneous requests. |
+| `GET /quote` | Yes | LTP for one or more instrument keys. |
+| `GET /historical-candle` | Yes | Raw OHLC+volume+OI candles for any instrument key, cached 5min. |
+| `GET /historical-spot` | Yes | Convenience wrapper over `/historical-candle` — resolves a shorthand index symbol (NIFTY, BANKNIFTY, …) to its instrument key for you. |
+| `GET /historical-option` | Yes | Same, for a specific option contract — get its `instrument_key` from `/option-chain` first. Only works for contracts that haven't expired yet (see limitations below). |
+| `GET /strike` | Yes | "Automatic Strike Search" — resolves ATM / ATM±N / closest-premium / closest-delta against the live chain. See `src/formulas/liveMarket/strikeResolver.ts`. |
+| `GET /expired-option-contracts` | Yes | Unchanged from before — still flagged as Upstox-Plus-plan-only. |
+
+**No database yet, by design (current roadmap phase):** `/option-chain` and
+the `/historical-*` routes are backed by a tiny in-memory TTL cache
+(`src/cache/memoryCache.ts`), not persistent storage. That means every server
+restart starts cold, and nothing here scales past a single instance — this is
+an intentional, temporary tradeoff (see the project-root roadmap doc) rather
+than an oversight. It's enough to avoid hammering Upstox with duplicate
+requests within a session; it is not a substitute for the DuckDB-backed
+persistence layer planned for later.
+
+**Two things the client's spec asks for that Upstox genuinely does not
+provide, at any plan tier** — don't build features that assume these exist:
+- **Historical Implied Volatility.** Upstox's historical-candle response is
+  OHLC + volume + OI only; IV only ever appears in the *live* option-chain
+  snapshot. The only way to get an IV history is to capture snapshots
+  yourself over time (the future DB/live-tick-storage phase), not to fetch it
+  from Upstox after the fact.
+- **A true historical option-chain snapshot** (e.g. "show me the full chain
+  as it looked on 2026-03-15"). Upstox's `/option/chain` endpoint is always
+  *current* state — there's no time-travel parameter. What's currently
+  buildable is: replay historical OHLC candles per strike for contracts whose
+  expiry *hasn't happened yet* (via `/historical-option`); reconstructing a
+  chain for an *already-expired* series needs the paid Expired Instruments
+  tier. Neither of these is "the chain as it looked at time X," only an
+  after-the-fact OHLC approximation.
 
 ## Local setup
 

@@ -31,6 +31,13 @@ formulas/
                        Percentile — that needs stored history, see the note
                        in the file)
     straddlePayoff.ts    Expiry-day payoff curve for "sell this straddle now"
+    expiryCalendar.ts    Nearest/weekly/monthly expiry date resolution (reuses
+                       analysis/expiryDay.ts's weekday schedule) — the
+                       "Automatic Expiry" piece of the Historical Data Engine
+    strikeResolver.ts    ATM / ATM±N / closest-premium / closest-delta strike
+                       search against a chain snapshot — the "Automatic
+                       Strike Search" piece, and what the future Strategy
+                       Optimizer will grid-search over
   analysis/
     overview.ts         1. Overall performance KPIs
     equityCurve.ts       2. Daily/Weekly/Monthly/Yearly equity curves
@@ -56,6 +63,9 @@ formulas/
     bestWorst.ts         23. Top winners / losers
     calendar.ts          24. Calendar heatmap data
     roi.ts               25. Monthly / quarterly / yearly ROI
+    riskMetrics.ts       26. Sharpe / Sortino / Calmar / Ulcer Index (MFE/MAE
+                       deliberately null — need intraday price history that
+                       doesn't exist yet, see the note in the file)
   index.ts              runFullAnalysis(trades, options) — orchestrates all of
                          the above into one `AnalysisReport` consumed by the UI
 ```

@@ -1,5 +1,22 @@
 import type { OptionChainResponse } from '../types/liveMarket';
 import type { Trade } from '../types/trade';
+import type { ExpiryKind } from '../formulas/liveMarket/expiryCalendar';
+import type { StrikeResolution, StrikeSelector } from '../formulas/liveMarket/strikeResolver';
+
+/** Mirrors `server/src/upstox/upstoxClient.ts`'s `CandleUnit` — kept as a small local type rather than a cross-package import since the frontend and backend are separate deployables. */
+export type CandleUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
+
+export interface ExpiryResolution {
+  kind: ExpiryKind;
+  referenceDate: string;
+  expiryDate: string;
+  weekday: string;
+}
+
+export interface CandleResponse {
+  status: string;
+  data: { candles: [string, number, number, number, number, number, number][] };
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -47,6 +64,41 @@ export const upstoxApi = {
   quote: (instrumentKeys: string[]) =>
     apiFetch<{ status: string; data: Record<string, { last_price: number; instrument_token: string }> }>(
       `/api/market/quote?instrument_keys=${encodeURIComponent(instrumentKeys.join(','))}`,
+    ),
+
+  expiry: (kind: ExpiryKind, referenceDate?: string) => {
+    const params = new URLSearchParams({ kind });
+    if (referenceDate) params.set('referenceDate', referenceDate);
+    return apiFetch<ExpiryResolution>(`/api/market/expiry?${params.toString()}`);
+  },
+
+  strike: (symbol: string, expiry: string, selector: StrikeSelector) => {
+    const params = new URLSearchParams({ symbol, expiry });
+    if (selector.type === 'ATM') {
+      params.set('mode', 'atm');
+    } else if (selector.type === 'ATM_OFFSET') {
+      params.set('mode', 'atm_offset');
+      params.set('steps', String(selector.steps));
+    } else if (selector.type === 'PREMIUM_CLOSEST') {
+      params.set('mode', 'premium');
+      params.set('optionType', selector.optionType);
+      params.set('target', String(selector.targetPremium));
+    } else {
+      params.set('mode', 'delta');
+      params.set('optionType', selector.optionType);
+      params.set('target', String(selector.targetDelta));
+    }
+    return apiFetch<StrikeResolution>(`/api/market/strike?${params.toString()}`);
+  },
+
+  historicalSpot: (symbol: string, unit: CandleUnit, interval: number, from: string, to: string) =>
+    apiFetch<CandleResponse>(
+      `/api/market/historical-spot?symbol=${encodeURIComponent(symbol)}&unit=${unit}&interval=${interval}&from=${from}&to=${to}`,
+    ),
+
+  historicalOption: (instrumentKey: string, unit: CandleUnit, interval: number, from: string, to: string) =>
+    apiFetch<CandleResponse>(
+      `/api/market/historical-option?instrument_key=${encodeURIComponent(instrumentKey)}&unit=${unit}&interval=${interval}&from=${from}&to=${to}`,
     ),
 
   syncTrades: async (startDate?: string, endDate?: string): Promise<{ trades: Trade[]; skipped: string[]; totalRawFills: number }> => {
