@@ -5,19 +5,20 @@ import { MultiBarChart } from '../../ui/charts';
 import { formatCurrency, formatDate } from '../../../utils/format';
 
 export function EntryExitSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const { entryTime, exitTime, duration, exitReason } = report;
 
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <ChartCard title="Entry Time vs Win Rate / Profit" subtitle="Bucketed by 15-minute entry window">
+        <ChartCard isEmpty={isEmpty} title="Entry Time vs Win Rate / Profit" subtitle="Bucketed by 15-minute entry window">
           <MultiBarChart
             data={entryTime.map((b) => ({ bucket: b.bucket, 'Win Rate %': b.winRatePct, Profit: b.profit }))}
             xKey="bucket"
             series={[{ dataKey: 'Profit', name: 'Profit (₹)' }]}
           />
         </ChartCard>
-        <ChartCard title="Exit Time — Profit by Bucket">
+        <ChartCard isEmpty={isEmpty} title="Exit Time — Profit by Bucket">
           <MultiBarChart
             data={exitTime.buckets.map((b) => ({ bucket: b.bucket, Profit: b.profit }))}
             xKey="bucket"
@@ -41,7 +42,7 @@ export function EntryExitSection({ report }: { report: AnalysisReport }) {
         />
       </div>
 
-      <ChartCard title="Exit Reason Breakdown" subtitle="Heuristic classification — see formulas/analysis/exitReason.ts">
+      <ChartCard isEmpty={isEmpty} title="Exit Reason Breakdown" subtitle="Heuristic classification — see formulas/analysis/exitReason.ts">
         <MultiBarChart
           data={exitReason.map((r) => ({ reason: r.reason, Trades: r.totalTrades, Profit: r.profit }))}
           xKey="reason"
@@ -49,7 +50,7 @@ export function EntryExitSection({ report }: { report: AnalysisReport }) {
         />
       </ChartCard>
 
-      <ChartCard title="Trade Duration Analysis">
+      <ChartCard isEmpty={isEmpty} title="Trade Duration Analysis">
         <MultiBarChart
           data={duration.map((d) => ({ bucket: d.bucket, Trades: d.totalTrades, Profit: d.profit }))}
           xKey="bucket"

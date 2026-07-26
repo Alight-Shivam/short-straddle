@@ -7,6 +7,7 @@ import { divergingColor } from '../../ui/heatmapColor';
 import type { YearStats } from '../../../formulas/analysis/yearWise';
 
 export function TimeAnalysisSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const yearCols: Column<YearStats>[] = [
     { key: 'year', label: 'Year', render: (r) => r.year },
     { key: 'trades', label: 'Trades', align: 'right', render: (r) => r.totalTrades },
@@ -23,22 +24,22 @@ export function TimeAnalysisSection({ report }: { report: AnalysisReport }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <ChartCard title="Year Wise — Profit">
+      <ChartCard isEmpty={isEmpty} title="Year Wise — Profit">
         <PnlBarChart data={report.yearWise.map((y) => ({ year: String(y.year), profit: y.profit }))} xKey="year" dataKey="profit" />
       </ChartCard>
-      <ChartCard title="Year Wise — Detail">
+      <ChartCard isEmpty={isEmpty} title="Year Wise — Detail">
         <DataTable columns={yearCols} rows={report.yearWise} />
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <ChartCard title="Month Wise — Seasonality (all years combined)">
+        <ChartCard isEmpty={isEmpty} title="Month Wise — Seasonality (all years combined)">
           <MultiBarChart
             data={report.monthWise.map((m) => ({ month: m.monthName.slice(0, 3), Profit: m.profit }))}
             xKey="month"
             series={[{ dataKey: 'Profit', name: 'Profit' }]}
           />
         </ChartCard>
-        <ChartCard title="Day of Week">
+        <ChartCard isEmpty={isEmpty} title="Day of Week">
           <MultiBarChart
             data={report.dayWise.map((d) => ({ day: d.dayName.slice(0, 3), Profit: d.profit }))}
             xKey="day"
@@ -47,7 +48,7 @@ export function TimeAnalysisSection({ report }: { report: AnalysisReport }) {
         </ChartCard>
       </div>
 
-      <ChartCard title="Monthly Heatmap" subtitle="Profit by calendar month, green = profit, red = loss">
+      <ChartCard isEmpty={isEmpty} title="Monthly Heatmap" subtitle="Profit by calendar month, green = profit, red = loss">
         <div className="overflow-auto">
           <table className="w-full border-separate border-spacing-1 text-xs">
             <thead>
@@ -77,7 +78,7 @@ export function TimeAnalysisSection({ report }: { report: AnalysisReport }) {
         </div>
       </ChartCard>
 
-      <ChartCard title="Expiry Day Analysis" subtitle="Heuristic — see formulas/analysis/expiryDay.ts">
+      <ChartCard isEmpty={isEmpty} title="Expiry Day Analysis" subtitle="Heuristic — see formulas/analysis/expiryDay.ts">
         <MultiBarChart
           data={report.expiryDay.map((e) => ({ bucket: e.bucket, Profit: e.profit }))}
           xKey="bucket"

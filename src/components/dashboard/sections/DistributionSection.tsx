@@ -7,6 +7,7 @@ import type { RollingWindowStats } from '../../../formulas/analysis/rolling';
 import type { RoiPoint } from '../../../formulas/analysis/roi';
 
 export function DistributionSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const { distribution, rolling, roi, capitalGrowth } = report;
 
   const rollingCols: Column<RollingWindowStats>[] = [
@@ -24,30 +25,30 @@ export function DistributionSection({ report }: { report: AnalysisReport }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <ChartCard title="Capital Growth" subtitle="Starting capital + cumulative P/L (fixed lot sizing, not compounded)">
+      <ChartCard isEmpty={isEmpty} title="Capital Growth" subtitle="Starting capital + cumulative P/L (fixed lot sizing, not compounded)">
         <EquityAreaChart data={capitalGrowth.map((p) => ({ trade: p.key, capital: p.capital }))} xKey="trade" dataKey="capital" height={240} />
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <ChartCard title="P/L Distribution" subtitle={`Mean ${formatCurrency(distribution.mean)} · StdDev ${formatCurrency(distribution.stdDev)}`}>
+        <ChartCard isEmpty={isEmpty} title="P/L Distribution" subtitle={`Mean ${formatCurrency(distribution.mean)} · StdDev ${formatCurrency(distribution.stdDev)}`}>
           <MultiBarChart data={distribution.histogram.map((b) => ({ range: b.rangeLabel, Count: b.count }))} xKey="range" series={[{ dataKey: 'Count', name: 'Trades' }]} height={220} />
         </ChartCard>
-        <ChartCard title="Profit Distribution">
+        <ChartCard isEmpty={isEmpty} title="Profit Distribution">
           <MultiBarChart data={distribution.profitHistogram.map((b) => ({ range: b.rangeLabel, Count: b.count }))} xKey="range" series={[{ dataKey: 'Count', name: 'Wins' }]} height={220} />
         </ChartCard>
-        <ChartCard title="Loss Distribution">
+        <ChartCard isEmpty={isEmpty} title="Loss Distribution">
           <MultiBarChart data={distribution.lossHistogram.map((b) => ({ range: b.rangeLabel, Count: b.count }))} xKey="range" series={[{ dataKey: 'Count', name: 'Losses' }]} height={220} />
         </ChartCard>
       </div>
 
-      <ChartCard title="Rolling Performance">
+      <ChartCard isEmpty={isEmpty} title="Rolling Performance">
         <DataTable columns={rollingCols} rows={rolling} />
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <ChartCard title="Monthly ROI"><DataTable columns={roiCols} rows={roi.monthly} maxHeight={320} dense /></ChartCard>
-        <ChartCard title="Quarterly ROI"><DataTable columns={roiCols} rows={roi.quarterly} maxHeight={320} dense /></ChartCard>
-        <ChartCard title="Yearly ROI"><DataTable columns={roiCols} rows={roi.yearly} maxHeight={320} dense /></ChartCard>
+        <ChartCard isEmpty={isEmpty} title="Monthly ROI"><DataTable columns={roiCols} rows={roi.monthly} maxHeight={320} dense /></ChartCard>
+        <ChartCard isEmpty={isEmpty} title="Quarterly ROI"><DataTable columns={roiCols} rows={roi.quarterly} maxHeight={320} dense /></ChartCard>
+        <ChartCard isEmpty={isEmpty} title="Yearly ROI"><DataTable columns={roiCols} rows={roi.yearly} maxHeight={320} dense /></ChartCard>
       </div>
     </div>
   );

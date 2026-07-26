@@ -41,24 +41,20 @@ export function Dashboard({ trades, onReset }: { trades: Trade[]; onReset: () =>
         <FiltersBar allTrades={trades} filters={filters} onChange={setFilters} filteredCount={filteredTrades.length} />
         <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
-        {filteredTrades.length === 0 ? (
-          <div className="card py-12 text-center text-sm text-slate-400">
-            {trades.length === 0
-              ? 'No trades in this date range. Reset and try a wider start/end date, or upload a CSV instead.'
-              : 'No trades match the current filters. Try clearing some filters.'}
+        {filteredTrades.length === 0 && trades.length > 0 && (
+          <div className="card py-3 text-center text-sm text-slate-400">
+            No trades match the current filters. Try clearing some filters — every widget below is showing "no data" for the same reason.
           </div>
-        ) : (
-          <>
-            {activeTab === 'overview' && <OverviewSection report={report} />}
-            {activeTab === 'time' && <TimeAnalysisSection report={report} />}
-            {activeTab === 'entryExit' && <EntryExitSection report={report} />}
-            {activeTab === 'options' && <OptionsSection report={report} />}
-            {activeTab === 'regime' && <MarketRegimeSection report={report} />}
-            {activeTab === 'distribution' && <DistributionSection report={report} />}
-            {activeTab === 'calendar' && <CalendarSection report={report} />}
-            {activeTab === 'log' && <TradeLogSection report={report} filteredTrades={filteredTrades} />}
-          </>
         )}
+
+        {activeTab === 'overview' && <OverviewSection report={report} />}
+        {activeTab === 'time' && <TimeAnalysisSection report={report} />}
+        {activeTab === 'entryExit' && <EntryExitSection report={report} />}
+        {activeTab === 'options' && <OptionsSection report={report} />}
+        {activeTab === 'regime' && <MarketRegimeSection report={report} />}
+        {activeTab === 'distribution' && <DistributionSection report={report} />}
+        {activeTab === 'calendar' && <CalendarSection report={report} />}
+        {activeTab === 'log' && <TradeLogSection report={report} filteredTrades={filteredTrades} />}
       </main>
     </div>
   );

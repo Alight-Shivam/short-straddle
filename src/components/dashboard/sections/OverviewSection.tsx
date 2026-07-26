@@ -5,6 +5,7 @@ import { DrawdownAreaChart, EquityAreaChart, WinLossPie } from '../../ui/charts'
 import { formatCurrency, formatNumber, formatPct } from '../../../utils/format';
 
 export function OverviewSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const { overview, riskMetrics, drawdown, streaks, capitalGrowth } = report;
   const roiPct = capitalGrowth.length ? capitalGrowth[capitalGrowth.length - 1].cumulativeReturnPct : 0;
   const currentCapital = capitalGrowth.length ? capitalGrowth[capitalGrowth.length - 1].capital : 0;
@@ -43,20 +44,20 @@ export function OverviewSection({ report }: { report: AnalysisReport }) {
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <ChartCard title="Equity Curve (Daily, Cumulative)" className="lg:col-span-2">
+        <ChartCard isEmpty={isEmpty} title="Equity Curve (Daily, Cumulative)" className="lg:col-span-2">
           <EquityAreaChart data={equityData} xKey="date" dataKey="equity" />
         </ChartCard>
-        <ChartCard title="Win / Loss Split">
+        <ChartCard isEmpty={isEmpty} title="Win / Loss Split">
           <WinLossPie wins={overview.winningTrades} losses={overview.losingTrades} scratches={overview.scratchTrades} />
         </ChartCard>
       </div>
 
-      <ChartCard title="Drawdown Curve" subtitle={`Longest: ${drawdown.longestDrawdownDays}d · Avg recovery: ${drawdown.averageRecoveryDays}d · Episodes: ${drawdown.drawdownFrequency}`}>
+      <ChartCard isEmpty={isEmpty} title="Drawdown Curve" subtitle={`Longest: ${drawdown.longestDrawdownDays}d · Avg recovery: ${drawdown.averageRecoveryDays}d · Episodes: ${drawdown.drawdownFrequency}`}>
         <DrawdownAreaChart data={ddData} xKey="date" dataKey="drawdown" />
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <ChartCard title="Overall Performance Detail">
+        <ChartCard isEmpty={isEmpty} title="Overall Performance Detail">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {[
               ['Gross Profit', formatCurrency(overview.grossProfit)],
@@ -75,7 +76,7 @@ export function OverviewSection({ report }: { report: AnalysisReport }) {
             ))}
           </dl>
         </ChartCard>
-        <ChartCard title="Streaks">
+        <ChartCard isEmpty={isEmpty} title="Streaks">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {[
               ['Longest Winning Streak', `${streaks.longestWinningStreak?.length ?? 0} trades`],

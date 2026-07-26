@@ -22,20 +22,21 @@ function tradeColumns(): Column<Trade>[] {
 }
 
 export function TradeLogSection({ report, filteredTrades }: { report: AnalysisReport; filteredTrades: Trade[] }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const cols = tradeColumns();
 
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <ChartCard title="Top 20 Winners">
+        <ChartCard isEmpty={isEmpty} title="Top 20 Winners">
           <DataTable columns={cols} rows={report.bestTrades} maxHeight={420} dense />
         </ChartCard>
-        <ChartCard title="Top 20 Losers">
+        <ChartCard isEmpty={isEmpty} title="Top 20 Losers">
           <DataTable columns={cols} rows={report.worstTrades} maxHeight={420} dense />
         </ChartCard>
       </div>
 
-      <ChartCard title="Full Trade Log" subtitle="Reflects active filters">
+      <ChartCard isEmpty={isEmpty} title="Full Trade Log" subtitle="Reflects active filters">
         <DataTable columns={cols} rows={filteredTrades} maxHeight={520} dense />
       </ChartCard>
     </div>

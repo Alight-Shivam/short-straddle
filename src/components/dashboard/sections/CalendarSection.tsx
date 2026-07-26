@@ -20,6 +20,7 @@ function monthGrid(year: number, month: number, cellsByDay: Map<number, { pnl: n
 }
 
 export function CalendarSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const byYearMonth = useMemo(() => {
     const map = new Map<string, Map<number, { pnl: number; tradeCount: number }>>();
     for (const day of report.calendar) {
@@ -35,7 +36,7 @@ export function CalendarSection({ report }: { report: AnalysisReport }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <ChartCard title="Trade Calendar" subtitle="Green = profitable day, red = loss day. Hover a cell for details.">
+      <ChartCard isEmpty={isEmpty} title="Trade Calendar" subtitle="Green = profitable day, red = loss day. Hover a cell for details.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {monthKeys.map((key) => {
             const [year, month] = key.split('-').map(Number);

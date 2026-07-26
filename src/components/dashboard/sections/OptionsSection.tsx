@@ -5,11 +5,12 @@ import { formatCurrency, formatPct } from '../../../utils/format';
 import { CE_COLOR, PE_COLOR } from '../../../utils/colors';
 
 export function OptionsSection({ report }: { report: AnalysisReport }) {
+  const isEmpty = report.overview.totalTrades === 0;
   const { premiumRanges, strike, cePe, premiumDecay } = report;
 
   return (
     <div className="flex flex-col gap-5">
-      <ChartCard title="Entry Premium Range vs Profit" subtitle="Combined CE+PE entry premium">
+      <ChartCard isEmpty={isEmpty} title="Entry Premium Range vs Profit" subtitle="Combined CE+PE entry premium">
         <MultiBarChart
           data={premiumRanges.map((r) => ({ range: r.range, Profit: r.profit, Trades: r.totalTrades }))}
           xKey="range"
@@ -18,7 +19,7 @@ export function OptionsSection({ report }: { report: AnalysisReport }) {
       </ChartCard>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <ChartCard title="Strike Analysis (ATM / ITM / OTM)">
+        <ChartCard isEmpty={isEmpty} title="Strike Analysis (ATM / ITM / OTM)">
           <MultiBarChart
             data={strike.map((s) => ({ bucket: s.bucket, Profit: s.profit, Trades: s.totalTrades }))}
             xKey="bucket"
@@ -26,7 +27,7 @@ export function OptionsSection({ report }: { report: AnalysisReport }) {
           />
         </ChartCard>
 
-        <ChartCard title="CE vs PE — Contribution">
+        <ChartCard isEmpty={isEmpty} title="CE vs PE — Contribution">
           <MultiBarChart
             data={[
               { side: 'CE', Profit: cePe.ce.totalPnl, 'Avg Decay %': cePe.ce.averageDecayPct },
@@ -56,7 +57,7 @@ export function OptionsSection({ report }: { report: AnalysisReport }) {
         </ChartCard>
       </div>
 
-      <ChartCard title="Premium Decay % Buckets" subtitle="(entry premium − exit premium) / entry premium">
+      <ChartCard isEmpty={isEmpty} title="Premium Decay % Buckets" subtitle="(entry premium − exit premium) / entry premium">
         <MultiBarChart
           data={premiumDecay.map((d) => ({ bucket: d.bucket, Trades: d.totalTrades, Profit: d.profit }))}
           xKey="bucket"
