@@ -25,6 +25,7 @@ import { buildTradeCalendar, type CalendarDay } from './analysis/calendar';
 import { analyzeRoi, type RoiPoint } from './analysis/roi';
 import type { TimeBucketStats } from './analysis/entryTime';
 import { computeRiskMetrics, type RiskMetrics } from './analysis/riskMetrics';
+import { generateInsights, type Insight } from './analysis/insights';
 
 export interface AnalysisReport {
   overview: OverallPerformance;
@@ -59,6 +60,7 @@ export interface AnalysisReport {
   worstTrades: Trade[];
   calendar: CalendarDay[];
   roi: { monthly: RoiPoint[]; quarterly: RoiPoint[]; yearly: RoiPoint[] };
+  insights: Insight[];
 }
 
 export interface AnalysisOptions {
@@ -73,7 +75,7 @@ export interface AnalysisOptions {
 export function runFullAnalysis(trades: Trade[], options: AnalysisOptions = {}): AnalysisReport {
   const startingCapital = options.startingCapital ?? DEFAULT_STARTING_CAPITAL;
 
-  return {
+  const reportWithoutInsights: Omit<AnalysisReport, 'insights'> = {
     overview: computeOverallPerformance(trades),
     riskMetrics: computeRiskMetrics(trades, startingCapital),
     equityCurve: {
@@ -107,6 +109,8 @@ export function runFullAnalysis(trades: Trade[], options: AnalysisOptions = {}):
     calendar: buildTradeCalendar(trades),
     roi: analyzeRoi(trades, startingCapital),
   };
+
+  return { ...reportWithoutInsights, insights: generateInsights(reportWithoutInsights) };
 }
 
 export * from './csvSchema';

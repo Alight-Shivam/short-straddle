@@ -66,6 +66,13 @@ formulas/
     riskMetrics.ts       26. Sharpe / Sortino / Calmar / Ulcer Index (MFE/MAE
                        deliberately null — need intraday price history that
                        doesn't exist yet, see the note in the file)
+    insights.ts          27. Rule-based AI Insights — plain threshold/
+                       comparison rules over the other 25 modules' output,
+                       NOT an LLM. Every claim traces to a number already
+                       elsewhere on the dashboard.
+    nlQuery.ts           28. Rule-based NL Query Engine — templated pattern
+                       matching over a fixed intent list (also not an LLM);
+                       answers are read straight off `AnalysisReport`.
   index.ts              runFullAnalysis(trades, options) — orchestrates all of
                          the above into one `AnalysisReport` consumed by the UI
 ```

@@ -14,6 +14,7 @@ import { MarketRegimeSection } from './sections/MarketRegimeSection';
 import { DistributionSection } from './sections/DistributionSection';
 import { CalendarSection } from './sections/CalendarSection';
 import { TradeLogSection } from './sections/TradeLogSection';
+import { InsightsSection } from './sections/InsightsSection';
 
 const TABS: TabDef[] = [
   { key: 'overview', label: 'Overview' },
@@ -23,6 +24,7 @@ const TABS: TabDef[] = [
   { key: 'regime', label: 'Volatility & Gap/Trend' },
   { key: 'distribution', label: 'Distribution & ROI' },
   { key: 'calendar', label: 'Calendar' },
+  { key: 'insights', label: 'Insights' },
   { key: 'log', label: 'Trade Log' },
 ];
 
@@ -62,6 +64,7 @@ export function Dashboard({ trades, onReset }: { trades: Trade[]; onReset: () =>
         {activeTab === 'regime' && <MarketRegimeSection report={report} />}
         {activeTab === 'distribution' && <DistributionSection report={report} />}
         {activeTab === 'calendar' && <CalendarSection report={report} />}
+        {activeTab === 'insights' && <InsightsSection report={report} />}
         {activeTab === 'log' && <TradeLogSection report={report} filteredTrades={filteredTrades} />}
       </main>
     </div>
