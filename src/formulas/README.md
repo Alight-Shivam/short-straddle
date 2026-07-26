@@ -11,10 +11,26 @@ assumption), this is the **only** place you need to edit.
 
 ```
 formulas/
-  csvSchema.ts        Canonical CSV column list + template generator (Stage 0)
+  csvSchema.ts        Canonical CSV column list + template generator (Stage 0).
+                      Pure/isomorphic (no `document`/`Blob`) — safe to import
+                      from the Node backend too.
+  buildTrade.ts        Shared "derived fields" step (isWin, durationMinutes,
+                       dayName, entryPremiumTotal, …) — used by BOTH
+                       parseTrades.ts (CSV) and server/src/upstox/tradeSync.ts
+                       (Upstox sync), so a trade scores identically either way.
   parseTrades.ts       Raw CSV rows -> Trade[] (groups parent + CE/PE legs)
+  filters.ts           Stage 3 — dashboard filter predicates over Trade[]
   validation/
-    rules.ts           Stage 1 — Data Validation checks
+    rules.ts           Stage 1 — Data Validation checks (shared `validateTrades`
+                       used by both the CSV and Upstox-sync entry points)
+  liveMarket/           Live-market analytics for the Upstox-backed "Live
+                       Market" tab (independent of the backtest engine above):
+    pcr.ts               Put-Call Ratio + per-strike OI buildup table
+    maxPain.ts           Max Pain strike + full pain curve
+    ivMetrics.ts         ATM IV + IV skew across strikes (NOT IV Rank/
+                       Percentile — that needs stored history, see the note
+                       in the file)
+    straddlePayoff.ts    Expiry-day payoff curve for "sell this straddle now"
   analysis/
     overview.ts         1. Overall performance KPIs
     equityCurve.ts       2. Daily/Weekly/Monthly/Yearly equity curves
@@ -58,3 +74,35 @@ formulas/
 3. **Never mutate input.** All functions treat `Trade[]` as read-only.
 4. **One responsibility per file.** If you need a new metric, add a function
    to the relevant file (or a new file) rather than growing a god-module.
+
+## Verified against Indian market conventions (July 2026)
+
+Every constant in this folder that encodes a real exchange rule was checked
+against current NSE circulars/broker documentation, not assumed. Notable
+findings from that pass:
+
+- **Expiry weekday is not constant.** NSE ran Thursday expiry for NIFTY/
+  BANKNIFTY from inception, then moved to Tuesday effective 2025-09-02 (a
+  March-2025 circular proposing Monday, effective 2025-04-04, was withdrawn
+  before taking effect — deliberately not modeled). `expiryDay.ts` uses a
+  dated schedule (`EXPIRY_WEEKDAY_SCHEDULE`) rather than a single weekday
+  constant, so a dataset spanning the cutover classifies correctly on both
+  sides.
+- **Strike step is a moving target too.** 50 pts is the long-standing default;
+  100 pts is BANKNIFTY's standard and was also used for far NIFTY strikes;
+  25 pts was introduced for monthly/quarterly NIFTY strikes on 2025-11-17.
+  `validation/rules.ts` allow-lists all three rather than picking one.
+- **India VIX bands**: retuned to the commonly-cited <15 / 15-20 / >20 split
+  (was <15/15-25) to match standard retail/broker interpretation.
+- **Lot size** is deliberately never hardcoded anywhere — `Qty` in the CSV is
+  the actual traded quantity, so repeated SEBI-mandated lot-size revisions
+  (BANKNIFTY alone changed 3 times in the 2024-2025 window) can't desync the
+  math.
+- **Not modeled yet, flagged for a future pass**: transaction costs (STT on
+  options sell + on exercise, exchange/SEBI charges, stamp duty, brokerage,
+  GST) are not subtracted anywhere, so all P&L in this app is *gross*. STT on
+  options was hiked to 0.15% of premium (both on sell and on exercise)
+  effective the FY2026-27 Budget — material enough on a high-frequency
+  short-straddle log that a "net of costs" toggle is worth adding (see
+  `capitalGrowth.ts` / `overview.ts` as the two places a cost model would
+  plug in).

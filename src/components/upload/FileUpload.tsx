@@ -1,17 +1,46 @@
 import { useCallback, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { downloadTemplateCsv, CSV_COLUMNS, CSV_COLUMN_DESCRIPTIONS } from '../../formulas/csvSchema';
+import { buildTemplateCsv, CSV_COLUMNS, CSV_COLUMN_DESCRIPTIONS } from '../../formulas/csvSchema';
+import { downloadTextFile } from '../../utils/downloadCsv';
+import { useUpstox } from '../../upstox/UpstoxContext';
+import { upstoxApi } from '../../upstox/api';
+import type { Trade } from '../../types/trade';
 
 interface FileUploadProps {
   onFile: (file: File) => void;
+  onSyncedTrades: (trades: Trade[], skipped: string[]) => void;
   isLoading?: boolean;
   errorMessage?: string | null;
 }
 
-export function FileUpload({ onFile, isLoading, errorMessage }: FileUploadProps) {
+export function FileUpload({ onFile, onSyncedTrades, isLoading, errorMessage }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const [showSchema, setShowSchema] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { status, login } = useUpstox();
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const handleSync = useCallback(async () => {
+    if (!status.connected) {
+      login();
+      return;
+    }
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const { trades, skipped } = await upstoxApi.syncTrades();
+      if (trades.length === 0) {
+        setSyncError('No F&O trades found in your Upstox history for the last 3 years.');
+        return;
+      }
+      onSyncedTrades(trades, skipped);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Failed to sync trades from Upstox.');
+    } finally {
+      setSyncing(false);
+    }
+  }, [status.connected, login, onSyncedTrades]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -28,8 +57,38 @@ export function FileUpload({ onFile, isLoading, errorMessage }: FileUploadProps)
       <div className="text-center">
         <h1 className="text-2xl font-semibold text-slate-100">Short Straddle Backtest Analyzer</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Upload your strategy trade log CSV to get full validation, performance analytics, and a filterable dashboard.
+          Sync your trade history straight from Upstox, or upload a CSV — both feed the same validation and analytics dashboard.
         </p>
+      </div>
+
+      <div className="card flex flex-col items-center gap-3 border-sky-900/60 bg-sky-950/10 text-center">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-sky-400">Primary · Recommended</span>
+        <h2 className="text-base font-semibold text-slate-100">Sync from Upstox</h2>
+        <p className="max-w-md text-sm text-slate-400">
+          Pulls your own executed F&O trades (up to the last 3 years) and reconstructs your straddle log automatically — no manual
+          export needed.
+        </p>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+        >
+          {syncing ? 'Syncing…' : status.connected ? 'Sync my trades' : 'Connect & sync'}
+        </button>
+        {syncError && <p className="text-xs text-rose-400">{syncError}</p>}
+        {status.connected && (
+          <p className="text-xs text-slate-500">
+            Note: synced trades carry the trade date but not the exact execution time or that day's VIX (Upstox's trade-history API
+            doesn't return either) — Entry/Exit Time and Volatility analysis won't be meaningful for them. Everything else (P&L,
+            drawdown, streaks, day/month/year breakdowns, ROI, …) works the same as a CSV upload.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="h-px flex-1 bg-slate-800" />
+        or upload a CSV
+        <div className="h-px flex-1 bg-slate-800" />
       </div>
 
       <div
@@ -69,7 +128,7 @@ export function FileUpload({ onFile, isLoading, errorMessage }: FileUploadProps)
 
       <div className="flex items-center justify-center gap-4">
         <button
-          onClick={() => downloadTemplateCsv()}
+          onClick={() => downloadTextFile(buildTemplateCsv(), 'short-straddle-template.csv')}
           className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700"
         >
           Download CSV template

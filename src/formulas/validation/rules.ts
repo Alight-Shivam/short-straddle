@@ -1,4 +1,4 @@
-import type { ParsedDataset, RawTradeRow, ValidationIssue } from '../../types/trade';
+import type { ParsedDataset, RawTradeRow, Trade, ValidationIssue } from '../../types/trade';
 
 /**
  * Stage 1 — Data Validation.
@@ -12,11 +12,26 @@ import type { ParsedDataset, RawTradeRow, ValidationIssue } from '../../types/tr
  * to find and change without hunting through logic.
  */
 
-/** Trading session bounds used by "Wrong Entry/Exit Time". */
+/**
+ * Trading session bounds used by "Wrong Entry/Exit Time". NSE cash/derivatives
+ * normal market hours are 09:15-15:30 IST — unchanged since exchange
+ * inception, verified July 2026.
+ */
 export const MARKET_OPEN_TIME = '09:15:00';
 export const MARKET_CLOSE_TIME = '15:30:00';
-/** Standard weekly-options strike spacing used by "Wrong Strike" (NIFTY = 50/100 depending on era). */
-export const STRIKE_STEP_CANDIDATES = [50, 100];
+/**
+ * Standard NIFTY strike spacing used by "Wrong Strike", widened to cover
+ * every regime confirmed via NSE circulars (July 2026 check):
+ *  - 50 pts: the long-standing default for near-the-money weekly strikes
+ *  - 100 pts: used for further OTM/ITM strikes and historically for
+ *    monthly/quarterly contracts, also BANKNIFTY's standard spacing
+ *  - 25 pts: NSE narrowed monthly/quarterly NIFTY strikes to a 25-point
+ *    interval (100-1-100 scheme) effective 2025-11-17
+ * A leg strike failing all three is still almost certainly a data-entry
+ * error, but don't add a 4th value without checking the latest NSE circular
+ * first — the list is deliberately an allow-list, not a guess.
+ */
+export const STRIKE_STEP_CANDIDATES = [25, 50, 100];
 /** A straddle's CE/PE strikes further apart than this are flagged (points). */
 export const MAX_STRADDLE_STRIKE_GAP = 500;
 /** Holding periods longer than this are flagged as a likely expiry mismatch for weekly options. */
@@ -54,33 +69,15 @@ function pushIf(issues: ValidationIssue[], cond: boolean, issue: ValidationIssue
   if (cond) issues.push(issue);
 }
 
-export function runValidation(dataset: ParsedDataset, rawRows: RawTradeRow[]): ValidationReport {
-  const issues: ValidationIssue[] = [...dataset.issues];
-  const trades = dataset.trades;
-
-  // ---- Missing Values (on raw rows, before any defaulting happened) ----
-  for (const row of rawRows) {
-    const idx = row.Index?.trim();
-    if (!idx) continue;
-    const isParent = /^\d+$/.test(idx);
-    if (isParent) {
-      const requiredParentFields: (keyof RawTradeRow)[] = ['Entry Date', 'Entry Time', 'Exit Date', 'Exit Time', 'P/L'];
-      for (const f of requiredParentFields) {
-        pushIf(issues, !row[f]?.trim(), {
-          tradeId: idx, rowNumber: -1, severity: 'error', code: 'MISSING_VALUE',
-          message: `Trade ${idx}: missing "${f}".`,
-        });
-      }
-    } else {
-      const requiredLegFields: (keyof RawTradeRow)[] = ['Type', 'Strike', 'B/S', 'Qty', 'Entry Price', 'Exit Price', 'P/L'];
-      for (const f of requiredLegFields) {
-        pushIf(issues, !row[f]?.trim(), {
-          tradeId: idx, rowNumber: -1, severity: 'error', code: 'MISSING_VALUE',
-          message: `Leg ${idx}: missing "${f}".`,
-        });
-      }
-    }
-  }
+/**
+ * All the per-trade business-rule checks (Entry<Exit, time bounds, expiry
+ * proxy, premium sanity, P&L correctness, strike sanity) — these only need a
+ * `Trade[]`, so they run identically whether the trades came from a CSV
+ * upload or an Upstox sync. Raw-CSV-only checks (Missing Values, which needs
+ * the original blank/non-blank string) live in `runValidation` below instead.
+ */
+export function validateTrades(trades: Trade[]): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
 
   // ---- Duplicate Trades (same parent Index appears more than once) ----
   const idCounts = new Map<string, number>();
@@ -183,36 +180,80 @@ export function runValidation(dataset: ParsedDataset, rawRows: RawTradeRow[]): V
     }
   }
 
-  const summaryDefs: { key: string; label: string; codes: string[]; severity: ValidationSummaryItem['severity'] }[] = [
-    { key: 'duplicate', label: 'Duplicate Trades', codes: ['DUPLICATE_TRADE', 'DUPLICATE_ENTRY_TIMESTAMP'], severity: 'error' },
-    { key: 'missing', label: 'Missing Values', codes: ['MISSING_VALUE'], severity: 'error' },
-    { key: 'wrongEntryTime', label: 'Wrong Entry Time', codes: ['WRONG_ENTRY_TIME'], severity: 'warning' },
-    { key: 'wrongExitTime', label: 'Wrong Exit Time', codes: ['WRONG_EXIT_TIME'], severity: 'warning' },
-    { key: 'wrongStrike', label: 'Wrong Strike', codes: ['WRONG_STRIKE', 'STRIKE_GAP'], severity: 'warning' },
-    { key: 'wrongExpiry', label: 'Wrong Expiry', codes: ['WRONG_EXPIRY'], severity: 'warning' },
-    { key: 'negativePrice', label: 'Negative Price', codes: ['NEGATIVE_PRICE'], severity: 'error' },
-    { key: 'incorrectPnl', label: 'Incorrect P&L', codes: ['INCORRECT_PNL_PARENT', 'INCORRECT_PNL_LEG'], severity: 'error' },
-    { key: 'totalPremium', label: 'CE + PE Total Premium Issues', codes: ['BAD_TOTAL_PREMIUM', 'PREMIUM_IMBALANCE'], severity: 'warning' },
-    { key: 'entryExit', label: 'Entry Not Before Exit', codes: ['ENTRY_NOT_BEFORE_EXIT'], severity: 'error' },
-    { key: 'structural', label: 'Structural (bad date/type/orphan rows)', codes: ['BAD_DATE', 'WRONG_TYPE', 'ORPHAN_LEG'], severity: 'error' },
-  ];
+  return issues;
+}
 
-  const summary: ValidationSummaryItem[] = summaryDefs.map((def) => ({
+const SUMMARY_DEFS: { key: string; label: string; codes: string[]; severity: ValidationSummaryItem['severity'] }[] = [
+  { key: 'duplicate', label: 'Duplicate Trades', codes: ['DUPLICATE_TRADE', 'DUPLICATE_ENTRY_TIMESTAMP'], severity: 'error' },
+  { key: 'missing', label: 'Missing Values', codes: ['MISSING_VALUE'], severity: 'error' },
+  { key: 'wrongEntryTime', label: 'Wrong Entry Time', codes: ['WRONG_ENTRY_TIME'], severity: 'warning' },
+  { key: 'wrongExitTime', label: 'Wrong Exit Time', codes: ['WRONG_EXIT_TIME'], severity: 'warning' },
+  { key: 'wrongStrike', label: 'Wrong Strike', codes: ['WRONG_STRIKE', 'STRIKE_GAP'], severity: 'warning' },
+  { key: 'wrongExpiry', label: 'Wrong Expiry', codes: ['WRONG_EXPIRY'], severity: 'warning' },
+  { key: 'negativePrice', label: 'Negative Price', codes: ['NEGATIVE_PRICE'], severity: 'error' },
+  { key: 'incorrectPnl', label: 'Incorrect P&L', codes: ['INCORRECT_PNL_PARENT', 'INCORRECT_PNL_LEG'], severity: 'error' },
+  { key: 'totalPremium', label: 'CE + PE Total Premium Issues', codes: ['BAD_TOTAL_PREMIUM', 'PREMIUM_IMBALANCE'], severity: 'warning' },
+  { key: 'entryExit', label: 'Entry Not Before Exit', codes: ['ENTRY_NOT_BEFORE_EXIT'], severity: 'error' },
+  { key: 'structural', label: 'Structural (bad date/type/orphan rows)', codes: ['BAD_DATE', 'WRONG_TYPE', 'ORPHAN_LEG'], severity: 'error' },
+  { key: 'upstoxSkipped', label: 'Upstox Sync Notes', codes: ['UPSTOX_SYNC_SKIPPED'], severity: 'warning' },
+];
+
+function buildReport(trades: Trade[], issues: ValidationIssue[], totalRawRows: number, skippedRows: number): ValidationReport {
+  const summary: ValidationSummaryItem[] = SUMMARY_DEFS.map((def) => ({
     key: def.key,
     label: def.label,
     severity: def.severity,
     codes: def.codes,
     count: issues.filter((i) => def.codes.includes(i.code)).length,
   }));
-
   const errorCount = issues.filter((i) => i.severity === 'error').length;
+  return { totalTrades: trades.length, totalRawRows, skippedRows, issues, summary, isClean: errorCount === 0 };
+}
 
-  return {
-    totalTrades: trades.length,
-    totalRawRows: dataset.totalRawRows,
-    skippedRows: dataset.skippedRows,
-    issues,
-    summary,
-    isClean: errorCount === 0,
-  };
+/** Stage 1 entry point for a CSV upload. */
+export function runValidation(dataset: ParsedDataset, rawRows: RawTradeRow[]): ValidationReport {
+  const issues: ValidationIssue[] = [...dataset.issues];
+
+  // ---- Missing Values (on raw rows, before any defaulting happened) ----
+  for (const row of rawRows) {
+    const idx = row.Index?.trim();
+    if (!idx) continue;
+    const isParent = /^\d+$/.test(idx);
+    if (isParent) {
+      const requiredParentFields: (keyof RawTradeRow)[] = ['Entry Date', 'Entry Time', 'Exit Date', 'Exit Time', 'P/L'];
+      for (const f of requiredParentFields) {
+        pushIf(issues, !row[f]?.trim(), {
+          tradeId: idx, rowNumber: -1, severity: 'error', code: 'MISSING_VALUE',
+          message: `Trade ${idx}: missing "${f}".`,
+        });
+      }
+    } else {
+      const requiredLegFields: (keyof RawTradeRow)[] = ['Type', 'Strike', 'B/S', 'Qty', 'Entry Price', 'Exit Price', 'P/L'];
+      for (const f of requiredLegFields) {
+        pushIf(issues, !row[f]?.trim(), {
+          tradeId: idx, rowNumber: -1, severity: 'error', code: 'MISSING_VALUE',
+          message: `Leg ${idx}: missing "${f}".`,
+        });
+      }
+    }
+  }
+
+  issues.push(...validateTrades(dataset.trades));
+  return buildReport(dataset.trades, issues, dataset.totalRawRows, dataset.skippedRows);
+}
+
+/**
+ * Stage 1 entry point for an Upstox trade sync — same per-trade business
+ * rules as a CSV upload, plus the sync's own "couldn't reconstruct this
+ * leg" notes surfaced as warnings in the same report shape (see
+ * `tradeSync.ts` on the backend for what generates `skippedNotes`).
+ */
+export function buildSyncValidationReport(trades: Trade[], skippedNotes: string[]): ValidationReport {
+  const issues: ValidationIssue[] = [
+    ...validateTrades(trades),
+    ...skippedNotes.map((note): ValidationIssue => ({
+      tradeId: 'upstox-sync', rowNumber: -1, severity: 'warning', code: 'UPSTOX_SYNC_SKIPPED', message: note,
+    })),
+  ];
+  return buildReport(trades, issues, trades.length, 0);
 }

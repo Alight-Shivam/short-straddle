@@ -1,9 +1,17 @@
 import type { Trade } from '../../types/trade';
 import { avg, round2, sum, winRate } from '../_shared';
 
-/** India VIX thresholds separating Low/Medium/High regimes. Edit here to re-tune. */
+/**
+ * India VIX thresholds separating Low/Medium/High regimes. Verified July 2026
+ * against the commonly-cited retail/broker convention: <15 reads as calm
+ * markets, 15-20 as a normal/elevated-uncertainty band (this is where most
+ * event-driven premium build-up shows up — Budget, RBI policy, earnings),
+ * >20 as a genuinely high-volatility regime with materially fatter option
+ * premiums. (India VIX itself has ranged roughly 10-35 outside crisis
+ * spikes like March 2020, when it briefly exceeded 80.)
+ */
 export const VIX_LOW_MAX = 15;
-export const VIX_MEDIUM_MAX = 25;
+export const VIX_MEDIUM_MAX = 20;
 
 export type VixBucket = 'Low VIX' | 'Medium VIX' | 'High VIX';
 

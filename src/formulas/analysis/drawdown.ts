@@ -39,6 +39,39 @@ function buildSeries(points: EquityPoint[]): DrawdownSeriesPoint[] {
   return series;
 }
 
+export interface PercentDrawdownPoint {
+  key: string;
+  date: Date;
+  capital: number;
+  peak: number;
+  drawdownPct: number; // positive number = % below peak capital
+}
+
+/**
+ * Same peak-tracking idea as `buildSeries()` above, but expressed as a % of
+ * account capital (`startingCapital + cumulativePnl`) rather than a raw
+ * rupee amount off a P&L-only curve that can start at/near zero. Needed by
+ * `riskMetrics.ts`'s Ulcer Index, which is conventionally computed against
+ * account value so the peak is never zero (avoiding a divide-by-zero on the
+ * first loss of a fresh account) — kept here rather than duplicated since
+ * it's the same underlying daily series `analyzeDrawdown()` already builds.
+ */
+export function buildPercentDrawdownSeries(trades: Trade[], startingCapital: number): PercentDrawdownPoint[] {
+  const equity = dailyEquityCurve(trades);
+  let peak = startingCapital;
+  return equity.map((p) => {
+    const capital = startingCapital + p.cumulativePnl;
+    peak = Math.max(peak, capital);
+    return {
+      key: p.key,
+      date: p.date,
+      capital: round2(capital),
+      peak: round2(peak),
+      drawdownPct: peak > 0 ? round2(((peak - capital) / peak) * 100) : 0,
+    };
+  });
+}
+
 /** 3. Drawdown Analysis — computed from the daily equity curve. */
 export function analyzeDrawdown(trades: Trade[]): DrawdownReport {
   const equity = dailyEquityCurve(trades);

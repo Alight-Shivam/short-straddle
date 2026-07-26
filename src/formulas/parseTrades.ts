@@ -1,14 +1,8 @@
 import type { RawTradeRow, Trade, TradeLeg, ParsedDataset, ValidationIssue } from '../types/trade';
 import { CSV_COLUMNS } from './csvSchema';
+import { buildTrade, formatTime24, SESSION_CLOSE_TIME } from './buildTrade';
 
-/** Standard NSE cash-market session close used to flag "early" exits. Change here if needed. */
-export const SESSION_CLOSE_TIME = '15:15:00';
-
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+export { SESSION_CLOSE_TIME };
 
 /** Normalizes header names so minor casing/whitespace differences in an upload still match. */
 function normalizeHeader(h: string): string {
@@ -66,15 +60,6 @@ export function parseDateTime(dateStr: string, timeStr: string): Date | null {
     }
   }
   return new Date(Number(y), Number(mo) - 1, Number(da), hours, minutes, seconds);
-}
-
-/** Returns "HH:mm:ss" (24h) for stable display/bucketing regardless of input format. */
-export function formatTime24(d: Date | null): string {
-  if (!d) return '';
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
 }
 
 function isParentIndex(index: string): boolean {
@@ -196,41 +181,18 @@ export function parseTrades(rawRows: Record<string, unknown>[]): ParsedDataset {
       if (leg) legs.push(leg);
     }
 
-    const ce = legs.find((l) => l.type === 'CE') ?? null;
-    const pe = legs.find((l) => l.type === 'PE') ?? null;
     const vix = toNumber(p.Vix);
-    const parentPnl = toNumber(p['P/L']);
-    const legsPnlSum = legs.reduce((s, l) => s + l.pnl, 0);
-    const pnl = parentPnl ?? legsPnlSum;
+    const explicitPnl = toNumber(p['P/L']);
 
-    const durationMs = exitDate.getTime() - entryDate.getTime();
-    const durationMinutes = Math.max(0, Math.round(durationMs / 60000));
-
-    const trade: Trade = {
+    const trade = buildTrade({
       id: p.Index,
       rowNumber: group.parentRowNumber,
       entryDate,
-      entryTime: formatTime24(entryDate),
       exitDate,
-      exitTime: formatTime24(exitDate),
       vix,
-      pnl,
+      explicitPnl,
       legs,
-      ce,
-      pe,
-      entryPremiumTotal: ce && pe ? ce.entryPrice + pe.entryPrice : null,
-      exitPremiumTotal: ce && pe ? ce.exitPrice + pe.exitPrice : null,
-      durationMinutes,
-      dayOfWeek: entryDate.getDay(),
-      dayName: DAY_NAMES[entryDate.getDay()],
-      year: entryDate.getFullYear(),
-      month: entryDate.getMonth() + 1,
-      monthName: MONTH_NAMES[entryDate.getMonth()],
-      isWin: pnl > 0,
-      isLoss: pnl < 0,
-      isScratch: pnl === 0,
-      isEarlyExit: formatTime24(exitDate) < SESSION_CLOSE_TIME,
-    };
+    });
     trades.push(trade);
   }
 

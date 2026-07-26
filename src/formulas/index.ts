@@ -24,9 +24,11 @@ import { topWinners, topLosers } from './analysis/bestWorst';
 import { buildTradeCalendar, type CalendarDay } from './analysis/calendar';
 import { analyzeRoi, type RoiPoint } from './analysis/roi';
 import type { TimeBucketStats } from './analysis/entryTime';
+import { computeRiskMetrics, type RiskMetrics } from './analysis/riskMetrics';
 
 export interface AnalysisReport {
   overview: OverallPerformance;
+  riskMetrics: RiskMetrics;
   equityCurve: {
     daily: EquityPoint[];
     weekly: EquityPoint[];
@@ -73,6 +75,7 @@ export function runFullAnalysis(trades: Trade[], options: AnalysisOptions = {}):
 
   return {
     overview: computeOverallPerformance(trades),
+    riskMetrics: computeRiskMetrics(trades, startingCapital),
     equityCurve: {
       daily: dailyEquityCurve(trades),
       weekly: weeklyEquityCurve(trades),

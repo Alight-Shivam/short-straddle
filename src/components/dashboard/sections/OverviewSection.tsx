@@ -5,7 +5,7 @@ import { DrawdownAreaChart, EquityAreaChart, WinLossPie } from '../../ui/charts'
 import { formatCurrency, formatNumber, formatPct } from '../../../utils/format';
 
 export function OverviewSection({ report }: { report: AnalysisReport }) {
-  const { overview, drawdown, streaks, capitalGrowth } = report;
+  const { overview, riskMetrics, drawdown, streaks, capitalGrowth } = report;
   const roiPct = capitalGrowth.length ? capitalGrowth[capitalGrowth.length - 1].cumulativeReturnPct : 0;
   const currentCapital = capitalGrowth.length ? capitalGrowth[capitalGrowth.length - 1].capital : 0;
 
@@ -25,6 +25,21 @@ export function OverviewSection({ report }: { report: AnalysisReport }) {
         <KpiCard label="Recovery Factor" value={overview.recoveryFactor.toFixed(2)} />
         <KpiCard label="Average RR" value={overview.averageRR.toFixed(2)} />
         <KpiCard label="Max Win / Loss Streak" value={`${overview.maxConsecutiveWins} / ${overview.maxConsecutiveLosses}`} />
+      </div>
+
+      <div>
+        <h3 className="card-title">Risk-Adjusted Performance</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <KpiCard label="Sharpe Ratio" value={riskMetrics.sharpeRatio.toFixed(2)} sub="Annualized, 0% risk-free" tone={riskMetrics.sharpeRatio >= 1 ? 'good' : riskMetrics.sharpeRatio < 0 ? 'bad' : 'neutral'} />
+          <KpiCard label="Sortino Ratio" value={riskMetrics.sortinoRatio.toFixed(2)} sub="Downside deviation only" tone={riskMetrics.sortinoRatio >= 1 ? 'good' : riskMetrics.sortinoRatio < 0 ? 'bad' : 'neutral'} />
+          <KpiCard label="Calmar Ratio" value={Number.isFinite(riskMetrics.calmarRatio) ? riskMetrics.calmarRatio.toFixed(2) : '∞'} sub="CAGR ÷ Max Drawdown %" tone={riskMetrics.calmarRatio >= 1 ? 'good' : riskMetrics.calmarRatio < 0 ? 'bad' : 'neutral'} />
+          <KpiCard label="Ulcer Index" value={riskMetrics.ulcerIndex.toFixed(2)} sub="Lower is smoother equity" tone={riskMetrics.ulcerIndex <= 5 ? 'good' : 'bad'} />
+          <KpiCard label="CAGR" value={formatPct(riskMetrics.cagrPct)} sub="Annualized (or total if <1yr)" tone={riskMetrics.cagrPct >= 0 ? 'good' : 'bad'} />
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          MFE/MAE (Maximum Favorable/Adverse Excursion) aren't shown yet — they need the intraday price path during each trade's
+          holding window, which neither a CSV upload nor an Upstox trade-sync currently provides.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">

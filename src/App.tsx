@@ -1,16 +1,19 @@
 import { useCallback, useState } from 'react';
 import { parseCsvFile } from './utils/csv';
 import { mapRowToSchema, parseTrades } from './formulas/parseTrades';
-import { runValidation, type ValidationReport } from './formulas/validation/rules';
+import { runValidation, buildSyncValidationReport, type ValidationReport } from './formulas/validation/rules';
 import { verifyRequiredColumns } from './formulas/parseTrades';
 import type { Trade, RawTradeRow } from './types/trade';
 import { FileUpload } from './components/upload/FileUpload';
 import { ValidationReportView } from './components/upload/ValidationReport';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { UpstoxProvider } from './upstox/UpstoxContext';
+import { TopBar, type AppView } from './components/layout/TopBar';
+import { LiveMarketPage } from './components/liveMarket/LiveMarketPage';
 
 type Stage = 'upload' | 'validated' | 'dashboard';
 
-function App() {
+function BacktestAnalyzer() {
   const [stage, setStage] = useState<Stage>('upload');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -55,6 +58,13 @@ function App() {
     }
   }, []);
 
+  const handleSyncedTrades = useCallback((syncedTrades: Trade[], skipped: string[]) => {
+    setErrorMessage(null);
+    setTrades(syncedTrades);
+    setValidationReport(buildSyncValidationReport(syncedTrades, skipped));
+    setStage('validated');
+  }, []);
+
   const handleReset = useCallback(() => {
     setStage('upload');
     setTrades([]);
@@ -76,8 +86,29 @@ function App() {
 
   return (
     <div className="flex min-h-full items-center justify-center px-6 py-16">
-      <FileUpload onFile={handleFile} isLoading={isLoading} errorMessage={errorMessage} />
+      <FileUpload onFile={handleFile} onSyncedTrades={handleSyncedTrades} isLoading={isLoading} errorMessage={errorMessage} />
     </div>
+  );
+}
+
+function App() {
+  const [view, setView] = useState<AppView>('backtest');
+
+  return (
+    <UpstoxProvider>
+      <div className="flex min-h-full flex-col">
+        <TopBar activeView={view} onNavigate={setView} />
+        <div className="flex-1">
+          {view === 'backtest' ? (
+            <BacktestAnalyzer />
+          ) : (
+            <div className="mx-auto max-w-[1400px] px-6 py-6">
+              <LiveMarketPage />
+            </div>
+          )}
+        </div>
+      </div>
+    </UpstoxProvider>
   );
 }
 
