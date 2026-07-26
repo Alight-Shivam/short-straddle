@@ -11,6 +11,7 @@ import { UpstoxProvider } from './upstox/UpstoxContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { TopBar, type AppView } from './components/layout/TopBar';
 import { LiveMarketPage } from './components/liveMarket/LiveMarketPage';
+import { HistoricalDataPage } from './components/historical/HistoricalDataPage';
 
 type Stage = 'upload' | 'validated' | 'dashboard';
 
@@ -101,11 +102,15 @@ function App() {
         <div className="flex min-h-full flex-col">
           <TopBar activeView={view} onNavigate={setView} />
           <div className="flex-1">
-            {view === 'backtest' ? (
-              <BacktestAnalyzer />
-            ) : (
+            {view === 'backtest' && <BacktestAnalyzer />}
+            {view === 'live' && (
               <div className="mx-auto max-w-[1400px] px-6 py-6">
                 <LiveMarketPage />
+              </div>
+            )}
+            {view === 'historical' && (
+              <div className="mx-auto max-w-[1400px] px-6 py-6">
+                <HistoricalDataPage />
               </div>
             )}
           </div>

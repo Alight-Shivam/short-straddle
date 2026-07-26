@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { useUpstox } from '../../upstox/UpstoxContext';
 import { useTheme } from '../../theme/ThemeContext';
 
-export type AppView = 'backtest' | 'live';
+export type AppView = 'backtest' | 'live' | 'historical';
 
 export function TopBar({ activeView, onNavigate }: { activeView: AppView; onNavigate: (v: AppView) => void }) {
   const { status, login, logout } = useUpstox();
@@ -24,6 +24,12 @@ export function TopBar({ activeView, onNavigate }: { activeView: AppView; onNavi
             className={clsx('rounded-md px-3 py-1.5 text-sm font-medium', activeView === 'live' ? 'bg-slate-800 text-sky-400' : 'text-slate-400 hover:text-slate-200')}
           >
             Live Market
+          </button>
+          <button
+            onClick={() => onNavigate('historical')}
+            className={clsx('rounded-md px-3 py-1.5 text-sm font-medium', activeView === 'historical' ? 'bg-slate-800 text-sky-400' : 'text-slate-400 hover:text-slate-200')}
+          >
+            Historical Data
           </button>
         </nav>
       </div>
