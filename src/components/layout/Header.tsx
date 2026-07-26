@@ -1,3 +1,7 @@
+import type { Trade } from '../../types/trade';
+import type { AnalysisReport } from '../../formulas';
+import { ExportMenu } from './ExportMenu';
+
 interface Props {
   tradeCount: number;
   startingCapital: number;
@@ -6,6 +10,8 @@ interface Props {
   dateRangeEnd: string | null;
   onDateRangeChange: (start: string | null, end: string | null) => void;
   onReset: () => void;
+  filteredTrades: Trade[];
+  report: AnalysisReport;
 }
 
 export function Header({
@@ -16,6 +22,8 @@ export function Header({
   dateRangeEnd,
   onDateRangeChange,
   onReset,
+  filteredTrades,
+  report,
 }: Props) {
   return (
     <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/90 px-6 py-3 backdrop-blur">
@@ -58,6 +66,7 @@ export function Header({
             className="w-28 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200"
           />
         </label>
+        <ExportMenu trades={filteredTrades} report={report} />
         <button onClick={onReset} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800">
           Upload new file
         </button>

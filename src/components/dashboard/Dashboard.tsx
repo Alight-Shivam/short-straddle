@@ -46,6 +46,8 @@ export function Dashboard({ trades, onReset }: { trades: Trade[]; onReset: () =>
         dateRangeEnd={filters.dateRangeEnd}
         onDateRangeChange={(start, end) => setFilters((f) => ({ ...f, dateRangeStart: start, dateRangeEnd: end }))}
         onReset={onReset}
+        filteredTrades={filteredTrades}
+        report={report}
       />
       <main className="mx-auto flex max-w-[1400px] flex-col gap-5 px-6 py-5">
         <FiltersBar allTrades={trades} filters={filters} onChange={setFilters} filteredCount={filteredTrades.length} />
