@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { buildTemplateCsv, CSV_COLUMNS, CSV_COLUMN_DESCRIPTIONS } from '../../formulas/csvSchema';
 import { downloadTextFile } from '../../utils/downloadCsv';
+import { formatDateOnly } from '../../formulas/liveMarket/expiryCalendar';
 import { useUpstox } from '../../upstox/UpstoxContext';
 import { upstoxApi } from '../../upstox/api';
 import type { Trade } from '../../types/trade';
@@ -13,6 +14,13 @@ interface FileUploadProps {
   errorMessage?: string | null;
 }
 
+/** Upstox's own trade-history retention limit — used only as the pre-filled default, the user can widen/narrow it. */
+function defaultStartDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 3);
+  return formatDateOnly(d);
+}
+
 export function FileUpload({ onFile, onSyncedTrades, isLoading, errorMessage }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const [showSchema, setShowSchema] = useState(false);
@@ -20,6 +28,8 @@ export function FileUpload({ onFile, onSyncedTrades, isLoading, errorMessage }: 
   const { status, login } = useUpstox();
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(() => formatDateOnly(new Date()));
 
   const handleSync = useCallback(async () => {
     if (!status.connected) {
@@ -29,18 +39,14 @@ export function FileUpload({ onFile, onSyncedTrades, isLoading, errorMessage }: 
     setSyncing(true);
     setSyncError(null);
     try {
-      const { trades, skipped } = await upstoxApi.syncTrades();
-      if (trades.length === 0) {
-        setSyncError('No F&O trades found in your Upstox history for the last 3 years.');
-        return;
-      }
+      const { trades, skipped } = await upstoxApi.syncTrades(startDate, endDate);
       onSyncedTrades(trades, skipped);
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : 'Failed to sync trades from Upstox.');
     } finally {
       setSyncing(false);
     }
-  }, [status.connected, login, onSyncedTrades]);
+  }, [status.connected, login, onSyncedTrades, startDate, endDate]);
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -65,9 +71,32 @@ export function FileUpload({ onFile, onSyncedTrades, isLoading, errorMessage }: 
         <span className="text-[11px] font-semibold uppercase tracking-wide text-sky-400">Primary · Recommended</span>
         <h2 className="text-base font-semibold text-slate-100">Sync from Upstox</h2>
         <p className="max-w-md text-sm text-slate-400">
-          Pulls your own executed F&O trades (up to the last 3 years) and reconstructs your straddle log automatically — no manual
-          export needed.
+          Pulls your own executed F&O trades and reconstructs your straddle log automatically — no manual export needed. Choose the
+          date range to pull (Upstox only retains the last 3 years of trade history).
         </p>
+        <div className="flex flex-wrap items-end justify-center gap-3">
+          <label className="flex flex-col gap-1 text-left text-xs text-slate-400">
+            Start date
+            <input
+              type="date"
+              value={startDate}
+              max={endDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-left text-xs text-slate-400">
+            End date
+            <input
+              type="date"
+              value={endDate}
+              min={startDate}
+              max={formatDateOnly(new Date())}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+            />
+          </label>
+        </div>
         <button
           onClick={handleSync}
           disabled={syncing}

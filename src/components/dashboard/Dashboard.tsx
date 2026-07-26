@@ -42,7 +42,11 @@ export function Dashboard({ trades, onReset }: { trades: Trade[]; onReset: () =>
         <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
         {filteredTrades.length === 0 ? (
-          <div className="card py-12 text-center text-sm text-slate-400">No trades match the current filters. Try clearing some filters.</div>
+          <div className="card py-12 text-center text-sm text-slate-400">
+            {trades.length === 0
+              ? 'No trades in this date range. Reset and try a wider start/end date, or upload a CSV instead.'
+              : 'No trades match the current filters. Try clearing some filters.'}
+          </div>
         ) : (
           <>
             {activeTab === 'overview' && <OverviewSection report={report} />}
